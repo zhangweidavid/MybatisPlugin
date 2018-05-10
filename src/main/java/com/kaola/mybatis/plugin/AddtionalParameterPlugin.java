@@ -1,6 +1,7 @@
 package com.kaola.mybatis.plugin;
 
 import org.apache.ibatis.executor.parameter.ParameterHandler;
+import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.plugin.Intercepts;
 import org.apache.ibatis.plugin.Invocation;
@@ -16,6 +17,8 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 
 import java.sql.PreparedStatement;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 
@@ -27,6 +30,12 @@ public class AddtionalParameterPlugin implements Interceptor {
     private static final ObjectWrapperFactory DEFAULT_OBJECT_WRAPPER_FACTORY = new DefaultObjectWrapperFactory();
 
     private static final ReflectorFactory DEFAULT_REFLACTOR_FACTORY = new DefaultReflectorFactory();
+
+    private static final Map<String, Object> addtionalParameterMap = new HashMap<>();
+
+    static {
+        addtionalParameterMap.put("additional_current", new Date());
+    }
 
 
     @Override
@@ -47,7 +56,11 @@ public class AddtionalParameterPlugin implements Interceptor {
             }
         }
         //向扩展参数中添加附加信息
-        metaParameterHandler.setValue("boundSql.additionalParameters.kaola_current", new Date());
+        BoundSql boundSql = (BoundSql) metaParameterHandler.getValue("boundSql");
+        //添加扩展数据
+        for (Map.Entry<String, Object> entry : addtionalParameterMap.entrySet()) {
+            boundSql.setAdditionalParameter(entry.getKey(), entry.getValue());
+        }
 
         return invocation.proceed();
     }
@@ -56,8 +69,14 @@ public class AddtionalParameterPlugin implements Interceptor {
     public Object plugin(Object target) {
         return Plugin.wrap(target, this);
     }
+
     @Override
     public void setProperties(Properties properties) {
+        if (properties != null && !properties.isEmpty()) {
+            for (Map.Entry entry : properties.entrySet()) {
+                addtionalParameterMap.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+        }
     }
 
 
